@@ -509,9 +509,9 @@
         <!-- 视频时长滑块 -->
         <div class="param-group" style="margin-bottom:14px;">
           <label>视频时长偏好</label>
-          <input type="range" id="duration" min="1" max="5" value="3" step="1" oninput="updateDuration(this.value)" />
-          <div class="range-labels"><span>5秒</span><span>15秒</span><span>30秒</span><span>60秒</span><span>3分钟</span></div>
-          <div class="range-value" id="durationLabel">30秒</div>
+          <input type="range" id="duration" min="1" max="4" value="3" step="1" oninput="updateDuration(this.value)" />
+          <div class="range-labels"><span>5秒</span><span>10秒</span><span>15秒</span><span>20秒</span></div>
+          <div class="range-value" id="durationLabel">15秒</div>
         </div>
 
         <!-- 场景细节标签 -->
@@ -820,8 +820,8 @@ const sceneConfigs = {
    通用映射（跨场景共用）
    ════════════════════════════════════════════════════════════════ */
 
-const durationMap = ['5秒','15秒','30秒','60秒','3分钟'];
-const durationEnMap = ['5-second','15-second','30-second','60-second','3-minute'];
+const durationMap = ['5秒','10秒','15秒','20秒'];
+const durationEnMap = ['5-second','10-second','15-second','20-second'];
 
 const shotTypeMap = {
   wide: {cn:'广角全景镜头缓慢推进，展现真实空间纵深', en:'wide-angle establishing shot slowly pushing forward, showing authentic spatial depth'},
