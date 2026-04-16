@@ -181,12 +181,67 @@
       cursor: pointer;
       transition: all 0.2s;
       user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .scene-tag:hover { border-color: #58a6ff; color: #58a6ff; }
     .scene-tag.active {
       background: rgba(240,165,0,0.15);
       border-color: #f0a500;
       color: #f0a500;
+    }
+    .scene-tag.custom {
+      background: rgba(88,166,255,0.1);
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
+    .scene-tag.custom.active {
+      background: rgba(88,166,255,0.2);
+      border-color: #58a6ff;
+      color: #79c0ff;
+    }
+    .scene-tag .remove-btn {
+      font-size: 14px;
+      line-height: 1;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .scene-tag .remove-btn:hover {
+      opacity: 1;
+    }
+    .custom-tag-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .custom-tag-input {
+      flex: 1;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+    .custom-tag-input:focus { border-color: #58a6ff; }
+    .custom-tag-input::placeholder { color: #6e7681; }
+    .btn-add-tag {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #58a6ff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-add-tag:hover {
+      background: rgba(88,166,255,0.1);
+      border-color: #58a6ff;
     }
 
     /* ─── 输入区 ─── */
@@ -519,6 +574,10 @@
           <label>附加场景元素（可多选）</label>
           <div class="scene-tags" id="sceneTags">
             <!-- 动态生成 -->
+          </div>
+          <div class="custom-tag-input-row">
+            <input type="text" class="custom-tag-input" id="customTagInput" placeholder="输入自定义场景元素，如：无人机航拍、雨夜作业、油污地面..." />
+            <button class="btn-add-tag" onclick="addCustomTag()">+ 添加</button>
           </div>
         </div>
       </div>
@@ -870,6 +929,9 @@ function switchScene(sceneKey) {
   currentScene = sceneKey;
   const config = sceneConfigs[sceneKey];
   
+  // 清空自定义标签（自定义标签是场景特定的）
+  customTags = [];
+  
   // 更新标签样式
   document.querySelectorAll('.scene-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.scene === sceneKey);
@@ -893,26 +955,107 @@ function switchScene(sceneKey) {
   document.getElementById('copyRow').style.display = 'none';
 }
 
+// 存储当前场景的自定义标签
+let customTags = [];
+
 function renderSceneTags() {
   const container = document.getElementById('sceneTags');
   const config = sceneConfigs[currentScene];
-  container.innerHTML = config.tags.map(tag => 
-    `<span class="scene-tag active" data-val="${tag.id}">${tag.cn}</span>`
+  
+  // 生成预设标签HTML
+  let html = config.tags.map(tag => 
+    `<span class="scene-tag active" data-val="${tag.id}" data-type="preset">${tag.cn}</span>`
   ).join('');
   
-  // 重新绑定点击事件
-  container.querySelectorAll('.scene-tag').forEach(tag => {
+  // 添加自定义标签HTML
+  html += customTags.map((tag, index) => 
+    `<span class="scene-tag custom active" data-index="${index}" data-type="custom">${tag.cn}<span class="remove-btn" onclick="removeCustomTag(event, ${index})">×</span></span>`
+  ).join('');
+  
+  container.innerHTML = html;
+  
+  // 绑定预设标签点击事件
+  container.querySelectorAll('.scene-tag[data-type="preset"]').forEach(tag => {
     tag.addEventListener('click', () => tag.classList.toggle('active'));
   });
+  
+  // 绑定自定义标签点击事件（只切换active，不触发删除）
+  container.querySelectorAll('.scene-tag.custom').forEach(tag => {
+    tag.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('remove-btn')) {
+        tag.classList.toggle('active');
+      }
+    });
+  });
 }
+
+function addCustomTag() {
+  const input = document.getElementById('customTagInput');
+  const value = input.value.trim();
+  
+  if (!value) {
+    alert('请输入场景元素内容');
+    return;
+  }
+  
+  // 检查是否已存在
+  if (customTags.some(tag => tag.cn === value)) {
+    alert('该场景元素已存在');
+    return;
+  }
+  
+  // 添加到自定义标签数组
+  customTags.push({
+    cn: value,
+    en: value // 自定义标签英文直接使用中文（用户可理解）
+  });
+  
+  // 清空输入框
+  input.value = '';
+  
+  // 重新渲染
+  renderSceneTags();
+}
+
+function removeCustomTag(event, index) {
+  event.stopPropagation(); // 阻止冒泡，避免触发标签的active切换
+  customTags.splice(index, 1);
+  renderSceneTags();
+}
+
+// 回车键添加标签
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('customTagInput');
+  if (input) {
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomTag();
+      }
+    });
+  }
+});
 
 function getActiveTags() {
   const config = sceneConfigs[currentScene];
   const active = [];
+  
   document.querySelectorAll('.scene-tag.active').forEach(tag => {
-    const tagData = config.tags.find(t => t.id === tag.dataset.val);
-    if (tagData) active.push(tagData);
+    const type = tag.dataset.type;
+    
+    if (type === 'preset') {
+      // 预设标签
+      const tagData = config.tags.find(t => t.id === tag.dataset.val);
+      if (tagData) active.push(tagData);
+    } else if (type === 'custom') {
+      // 自定义标签
+      const index = parseInt(tag.dataset.index);
+      if (customTags[index]) {
+        active.push(customTags[index]);
+      }
+    }
   });
+  
   return active;
 }
 
