@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI视频提示词生成框架 · 多场景版</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    /* ─── 顶部标题区 ─── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      font-size: 32px;
+      filter: drop-shadow(0 0 8px rgba(255,165,0,0.6));
+    }
+    .title-block h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f0a500;
+      letter-spacing: 1px;
+    }
+    .title-block p {
+      font-size: 13px;
+      color: #8b949e;
+      margin-top: 4px;
+    }
+    .badge {
+      margin-left: auto;
+      background: rgba(240,165,0,0.15);
+      border: 1px solid rgba(240,165,0,0.4);
+      color: #f0a500;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ─── 场景切换器 ─── */
+    .scene-switcher {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .scene-switcher label {
+      font-size: 13px;
+      color: #8b949e;
+      font-weight: 500;
+    }
+    .scene-tabs {
+      display: flex;
+      gap: 8px;
+    }
+    .scene-tab {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .scene-tab:hover {
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
+    .scene-tab.active {
+      background: rgba(240,165,0,0.15);
+      border-color: #f0a500;
+      color: #f0a500;
+    }
+
+    /* ─── 主体布局 ─── */
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .panel-header {
+      background: #21262d;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #30363d;
+    }
+    .panel-header .icon { font-size: 18px; }
+    .panel-header h2 { font-size: 15px; font-weight: 600; color: #f0f6fc; }
+    .panel-header .sub { font-size: 12px; color: #8b949e; margin-left: auto; }
+    .panel-body { padding: 20px; }
+
+    /* ─── 参数控制区 ─── */
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .param-group label {
+      display: block;
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 6px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .param-group select,
+    .param-group input[type="range"] {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .param-group select:focus { border-color: #58a6ff; }
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6e7681;
+      margin-top: 4px;
+    }
+    .range-value {
+      text-align: center;
+      font-size: 13px;
+      color: #f0a500;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    /* ─── 场景标签 ─── */
+    .scene-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .scene-tag {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .scene-tag:hover { border-color: #58a6ff; color: #58a6ff; }
+    .scene-tag.active {
+      background: rgba(240,165,0,0.15);
+      border-color: #f0a500;
+      color: #f0a500;
+    }
+
+    /* ─── 输入区 ─── */
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+    }
+    textarea:focus { border-color: #58a6ff; }
+    textarea::placeholder { color: #6e7681; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f0a500 0%, #d48c00 100%);
+      color: #0d1117;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary {
+      background: #21262d;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+    }
+    .btn-secondary:hover { border-color: #58a6ff; }
+    .btn-clear {
+      background: transparent;
+      color: #6e7681;
+      padding: 10px 14px;
+    }
+    .btn-clear:hover { color: #f85149; }
+
+    /* ─── 结果区 ─── */
+    .result-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 200px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .result-section { margin-bottom: 16px; }
+    .result-section:last-child { margin-bottom: 0; }
+    .result-section-title {
+      font-size: 12px;
+      color: #f0a500;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .result-text {
+      color: #c9d1d9;
+      white-space: pre-wrap;
+    }
+    .result-text.en { color: #8b949e; }
+
+    .copy-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn-copy {
+      flex: 1;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-copy:hover { border-color: #58a6ff; color: #58a6ff; }
+    .btn-copy.copied { border-color: #3fb950; color: #3fb950; }
+
+    /* ─── 框架说明 ─── */
+    .framework-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 24px;
+      grid-column: 1 / -1;
+    }
+    .framework-card h3 {
+      font-size: 14px;
+      color: #f0a500;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .framework-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .framework-item {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .framework-item .fi-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f0a500;
+      margin-bottom: 6px;
+    }
+    .framework-item .fi-desc {
+      font-size: 12px;
+      color: #8b949e;
+      line-height: 1.5;
+    }
+
+    /* ─── 历史记录 ─── */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .history-item {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .history-item:hover { border-color: #f0a500; }
+    .history-item .hi-input {
+      font-size: 12px;
+      color: #8b949e;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item .hi-time {
+      font-size: 11px;
+      color: #484f58;
+      margin-top: 4px;
+    }
+    .history-item .hi-scene {
+      font-size: 10px;
+      color: #f0a500;
+      margin-top: 2px;
+    }
+    .empty-history {
+      text-align: center;
+      color: #484f58;
+      font-size: 13px;
+      padding: 40px 0;
+    }
+
+    /* ─── 状态提示 ─── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #3fb950;
+      color: #0d1117;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+      z-index: 999;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="headerLogo">⛏️</div>
+  <div class="title-block">
+    <h1 id="headerTitle">煤矿场景 · AI 视频提示词生成框架</h1>
+    <p id="headerDesc">输入文案，自动结合场景生成专业 AI 视频提示词（支持 豆包 / 可灵 / 通义 / Sora / Runway）</p>
+  </div>
+  <span class="badge" id="headerBadge">Coal Mine Vision</span>
+</header>
+
+<!-- ════════ 场景切换器 ════════ -->
+<div class="scene-switcher">
+  <label>🎬 选择场景：</label>
+  <div class="scene-tabs">
+    <div class="scene-tab active" data-scene="coalmine" onclick="switchScene('coalmine')">
+      ⛏️ 煤矿
+    </div>
+    <div class="scene-tab" data-scene="port" onclick="switchScene('port')">
+      🚢 港口
+    </div>
+    <div class="scene-tab" data-scene="factory" onclick="switchScene('factory')">
+      🏭 工厂
+    </div>
+    <div class="scene-tab" data-scene="construction" onclick="switchScene('construction')">
+      🏗️ 建筑工地
+    </div>
+    <div class="scene-tab" data-scene="railway" onclick="switchScene('railway')">
+      🚄 铁路
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ════════ 左侧：输入控制区 ════════ -->
+  <div>
+    <!-- 参数面板 -->
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-header">
+        <span class="icon">⚙️</span>
+        <h2>视频参数配置</h2>
+        <span class="sub">影响提示词风格与内容</span>
+      </div>
+      <div class="panel-body">
+        <div class="param-grid">
+          <div class="param-group">
+            <label>镜头类型</label>
+            <select id="shotType">
+              <option value="wide">广角全景镜头</option>
+              <option value="medium">中景镜头</option>
+              <option value="close">特写镜头</option>
+              <option value="aerial">俯视航拍镜头</option>
+              <option value="pov">第一人称视角</option>
+              <option value="tracking">跟踪运动镜头</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label>时间/光线</label>
+            <select id="lighting">
+              <option value="day">白天自然光</option>
+              <option value="dawn">黎明/黄昏</option>
+              <option value="night">夜间人工照明</option>
+              <option value="interior">室内照明</option>
+              <option value="emergency">应急/警示灯光</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label>画面风格</label>
+            <select id="style">
+              <option value="realistic">写实纪录片风格</option>
+              <option value="cinematic">电影感宽幅画面</option>
+              <option value="industrial">工业硬核质感</option>
+              <option value="safe">安全宣教教育风</option>
+              <option value="epic">史诗大气磅礴</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label>情绪基调</label>
+            <select id="mood">
+              <option value="heroic">英雄主义·奋斗</option>
+              <option value="serious">严肃·责任感</option>
+              <option value="tense">紧张·专注</option>
+              <option value="warm">温情·人文关怀</option>
+              <option value="warning">警示·安全教育</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label>主体角色</label>
+            <select id="subject">
+              <option value="worker">一线工人</option>
+              <option value="team">班组协作</option>
+              <option value="machine">机械设备</option>
+              <option value="safety">安全员/质检</option>
+              <option value="engineer">技术工程师</option>
+              <option value="mixed">人机协同</option>
+            </select>
+          </div>
+          <div class="param-group">
+            <label>输出平台</label>
+            <select id="platform">
+              <option value="sora">Sora（英文提示词）</option>
+              <option value="runway">Runway Gen-3</option>
+              <option value="kling">可灵 Kling（中文）</option>
+              <option value="wanx">通义万象</option>
+              <option value="doubao">豆包（字节跳动）</option>
+              <option value="universal">通用（双语）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 视频时长滑块 -->
+        <div class="param-group" style="margin-bottom:14px;">
+          <label>视频时长偏好</label>
+          <input type="range" id="duration" min="1" max="5" value="3" step="1" oninput="updateDuration(this.value)" />
+          <div class="range-labels"><span>5秒</span><span>15秒</span><span>30秒</span><span>60秒</span><span>3分钟</span></div>
+          <div class="range-value" id="durationLabel">30秒</div>
+        </div>
+
+        <!-- 场景细节标签 -->
+        <div class="param-group">
+          <label>附加场景元素（可多选）</label>
+          <div class="scene-tags" id="sceneTags">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 文案输入面板 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon">✏️</span>
+        <h2>文案输入</h2>
+        <span class="sub">输入你的原始文案或主题描述</span>
+      </div>
+      <div class="panel-body">
+        <textarea id="inputText" placeholder="在此输入你的文案内容…
+
+示例：
+• 工人在岗位上坚守，用汗水诠释工匠精神
+• 智能化改造让传统工业焕发新生
+• 安全生产是最大的效益，每一个规范动作都是对生命的尊重"></textarea>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generatePrompt()">
+            ⚡ 生成视频提示词
+          </button>
+          <button class="btn btn-secondary" onclick="loadExample()">
+            📋 加载示例文案
+          </button>
+          <button class="btn btn-clear" onclick="clearInput()" title="清空">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 右侧：输出结果区 ════════ -->
+  <div>
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-header">
+        <span class="icon">🎬</span>
+        <h2>生成的视频提示词</h2>
+        <span class="sub" id="resultPlatformLabel">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="result-box" id="resultBox">
+          <div style="text-align:center; padding: 60px 0; color: #484f58;">
+            <div style="font-size:48px; margin-bottom:12px; opacity:0.3;">🎬</div>
+            <div style="font-size:14px;">点击「生成视频提示词」开始</div>
+          </div>
+        </div>
+        <div class="copy-row" id="copyRow" style="display:none;">
+          <button class="btn-copy" id="copyCN" onclick="copyResult('cn')">📋 复制中文提示词</button>
+          <button class="btn-copy" id="copyEN" onclick="copyResult('en')">📋 复制英文提示词</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon">🕐</span>
+        <h2>历史记录</h2>
+        <button onclick="clearHistory()" style="margin-left:auto;background:none;border:none;color:#6e7681;cursor:pointer;font-size:12px;">清空</button>
+      </div>
+      <div class="panel-body">
+        <div class="history-list" id="historyList">
+          <div class="empty-history">暂无历史记录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 底部：框架说明 ════════ -->
+  <div class="framework-card">
+    <h3>📐 提示词框架结构说明</h3>
+    <div class="framework-grid">
+      <div class="framework-item">
+        <div class="fi-title">① 主体与动作</div>
+        <div class="fi-desc">Who & What：明确主体角色（工人/设备/场景），描述其核心动作与状态</div>
+      </div>
+      <div class="framework-item">
+        <div class="fi-title">② 场景环境</div>
+        <div class="fi-desc">Where：特有环境要素——空间结构、设备布局、材质纹理等</div>
+      </div>
+      <div class="framework-item">
+        <div class="fi-title">③ 镜头语言</div>
+        <div class="fi-desc">How Shot：镜头类型、运动方式（推/拉/跟/摇）、景深控制</div>
+      </div>
+      <div class="framework-item">
+        <div class="fi-title">④ 光线与氛围</div>
+        <div class="fi-desc">Mood & Light：光源类型、散射效果、高对比阴影，营造特定情绪</div>
+      </div>
+      <div class="framework-item">
+        <div class="fi-title">⑤ 画质技术词</div>
+        <div class="fi-desc">Quality：4K/8K、超写实、电影级调色、高帧率等技术质量描述词</div>
+      </div>
+      <div class="framework-item">
+        <div class="fi-title">⑥ 负向提示词</div>
+        <div class="fi-desc">Negative：明确排除低质量元素、不符合场景的内容（卡通、模糊等）</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">✅ 已复制到剪贴板</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   场景配置数据
+   ════════════════════════════════════════════════════════════════ */
+
+const sceneConfigs = {
+  coalmine: {
+    name: '煤矿',
+    icon: '⛏️',
+    badge: 'Coal Mine Vision',
+    tags: [
+      { id: 'dust', cn: '粉尘飞扬', en: 'coal dust particles floating in air, realistic Brownian motion' },
+      { id: 'lightbeam', cn: '矿灯光束', en: 'miner helmet light beams cutting through darkness, realistic volumetric lighting' },
+      { id: 'conveyor', cn: '传送带', en: 'industrial conveyor belt system in operation, coal transport, realistic speed 2-4m/s' },
+      { id: 'hydraulic', cn: '液压支架', en: 'hydraulic support system ZY series, realistic mechanical movement' },
+      { id: 'robot', cn: '智能巡检机器人', en: 'autonomous inspection robot with realistic sensor arrays, industrial design' },
+      { id: 'cage', cn: '罐笼升降', en: 'mine cage elevator system, steel cable mechanics, realistic 5-10m/s speed' },
+      { id: 'ventilation', cn: '通风管道', en: 'ventilation ducts 800-1000mm diameter, air flow 4-8m/s, realistic turbulence' },
+      { id: 'scada', cn: '调度室大屏', en: 'control room with realistic SCADA displays, actual data visualization' },
+      { id: 'safety', cn: '安全标识', en: 'safety signs following GB 2894 standard, realistic wear and tear' },
+      { id: 'water', cn: '井下涌水', en: 'groundwater seepage, realistic fluid dynamics, wet surfaces' },
+      { id: 'explosion', cn: '瓦斯监测', en: 'gas monitoring equipment, realistic sensor readings, safety compliance' },
+      { id: 'rescue', cn: '救援演练', en: 'emergency rescue drill, proper safety equipment, realistic procedures' }
+    ],
+    subjectMap: {
+      worker: { cn: '矿工（符合GB标准安全帽、反光背心、真实煤尘分布）', en: 'coal miners wearing GB-standard safety helmets, reflective vests, realistic coal dust distribution' },
+      team: { cn: '班组协作（真实作业配合、安全距离、手势沟通）', en: 'mining team collaboration, realistic work coordination, proper safety distances' },
+      machine: { cn: '采煤机（真实型号、切割滚筒转速、煤块飞溅轨迹）', en: 'coal shearer machine with realistic model specifications, cutting drum rotation speed' },
+      safety: { cn: '安全员（标准着装、检查动作、记录行为）', en: 'safety inspector in standard uniform, inspection movements, documentation' },
+      engineer: { cn: '工程师（技术图纸、测量工具、专业姿态）', en: 'mining engineer with technical drawings, measurement tools, professional posture' },
+      mixed: { cn: '人机协同（真实操作界面、响应延迟、配合节奏）', en: 'human-machine collaboration, realistic operation interface, coordination rhythm' }
+    },
+    lightingMap: {
+      day: { cn: '井下真实照明环境：矿灯光束（色温约3000K暖黄）穿透悬浮煤尘形成自然丁达尔效应', en: 'authentic underground lighting: helmet lamp beams (3000K warm yellow) penetrating suspended coal dust' },
+      dawn: { cn: '黎明前真实矿区：天空微亮（色温约6500K冷白），矿灯与工业照明逐渐交接', en: 'authentic pre-dawn mine: sky gradually brightening (6500K cool white), helmet lamps transitioning' },
+      night: { cn: '夜间施工真实照明：工业钠灯（色温约2200K橙黄）与LED泛光灯混合', en: 'authentic night construction lighting: industrial sodium lamps (2200K orange-yellow) mixed with LED' },
+      interior: { cn: '井下室内照明：LED防爆灯阵列，光线有真实衰减和反射', en: 'underground interior lighting: LED explosion-proof lamp arrays, realistic light falloff' },
+      emergency: { cn: '应急照明：红色警示灯，符合GB标准频闪，真实警示效果', en: 'emergency lighting with red warning lights, GB-standard strobe frequency' }
+    },
+    sceneDesc: '煤矿井下/矿场环境',
+    doubaoSuffix: '写实纪录片风格，所有元素符合真实煤矿场景物理规律，无夸张效果，无卡通动漫风格，8K超清。'
+  },
+  
+  port: {
+    name: '港口',
+    icon: '🚢',
+    badge: 'Port Operations',
+    tags: [
+      { id: 'crane', cn: '集装箱起重机', en: 'gantry container cranes, realistic lifting operations, spreader mechanics' },
+      { id: 'stack', cn: '集装箱堆场', en: 'container yard with realistic stacking patterns, weathering and rust' },
+      { id: 'ship', cn: '货轮装卸', en: 'cargo ship loading/unloading, realistic crane cycles, container securing' },
+      { id: 'truck', cn: '集卡运输', en: 'container trucks, realistic logistics flow, proper load distribution' },
+      { id: 'bulk', cn: '散货码头', en: 'bulk cargo terminal, conveyor systems, realistic material flow' },
+      { id: 'tugboat', cn: '拖轮作业', en: 'tugboat operations, realistic wake patterns, ship maneuvering' },
+      { id: 'warehouse', cn: '保税仓库', en: 'bonded warehouse, realistic inventory management, forklift operations' },
+      { id: 'customs', cn: '海关查验', en: 'customs inspection, realistic procedures, scanning equipment' },
+      { id: 'control', cn: '中控室', en: 'port control center with realistic TOS displays, actual vessel tracking' },
+      { id: 'pilot', cn: '引航员', en: 'harbor pilot operations, realistic boarding procedures, navigation' },
+      { id: 'nightops', cn: '夜间作业', en: 'night port operations, realistic lighting from cranes and ships' },
+      { id: 'weather', cn: '恶劣天气', en: 'port operations in adverse weather, realistic wave and wind effects' }
+    ],
+    subjectMap: {
+      worker: { cn: '码头工人（符合港口安全规范、反光背心、安全帽、真实油污分布）', en: 'dock workers following port safety regulations, reflective vests, realistic oil and dirt distribution' },
+      team: { cn: '班组协作（真实装卸配合、指挥手势、安全距离）', en: 'dock team collaboration, realistic loading coordination, hand signals' },
+      machine: { cn: '岸桥/场桥（真实型号、起升速度、吊具动作）', en: 'quay cranes/yard cranes with realistic models, hoisting speeds, spreader movements' },
+      safety: { cn: '安全员（标准着装、巡检动作、记录行为）', en: 'safety inspector in standard uniform, inspection rounds, documentation' },
+      engineer: { cn: '工程师（设备检修、技术图纸、专业姿态）', en: 'port engineer with maintenance tools, technical drawings, professional posture' },
+      mixed: { cn: '人机协同（远程操控、真实响应延迟、配合节奏）', en: 'human-machine collaboration, remote control, realistic response delay' }
+    },
+    lightingMap: {
+      day: { cn: '港口白天：正午阳光（色温5600K），强烈阴影，金属反光真实', en: 'port daytime: midday sun (5600K), strong shadows, realistic metal reflections' },
+      dawn: { cn: '港口黎明：晨光（色温6500K）与港口灯光混合，真实过渡', en: 'port dawn: morning light (6500K) mixing with port lighting, realistic transition' },
+      night: { cn: '夜间作业：高杆灯（4000K中性白）+桥吊照明，真实照明范围', en: 'night operations: high-mast lamps (4000K neutral white) + crane lighting' },
+      interior: { cn: '仓库室内：LED工矿灯照明，光线均匀分布', en: 'warehouse interior: LED industrial lighting, even light distribution' },
+      emergency: { cn: '应急照明：警示灯，符合港口安全标准', en: 'emergency lighting: warning lights, port safety standard compliant' }
+    },
+    sceneDesc: '港口码头作业环境',
+    doubaoSuffix: '写实纪录片风格，所有元素符合真实港口作业物理规律，无夸张效果，无卡通动漫风格，8K超清。'
+  },
+  
+  factory: {
+    name: '工厂',
+    icon: '🏭',
+    badge: 'Factory Floor',
+    tags: [
+      { id: 'assembly', cn: '装配流水线', en: 'assembly line with realistic production rhythm, worker movements' },
+      { id: 'welding', cn: '焊接作业', en: 'welding operations, realistic sparks and arc light, protective gear' },
+      { id: 'cnc', cn: '数控机床', en: 'CNC machining centers, realistic cutting tools, metal shavings' },
+      { id: 'robotarm', cn: '机械臂', en: 'industrial robotic arms, realistic motion paths and cycle times' },
+      { id: 'conveyor', cn: '传送带', en: 'factory conveyor systems, realistic product flow and spacing' },
+      { id: 'forklift', cn: '叉车作业', en: 'forklift operations, realistic load handling, safety procedures' },
+      { id: 'quality', cn: '质量检测', en: 'quality inspection station, realistic measurement tools and gauges' },
+      { id: 'maintenance', cn: '设备维护', en: 'equipment maintenance, realistic tools and lubricants' },
+      { id: 'safety', cn: '安全防护', en: 'safety guards and barriers, emergency stop buttons, warning signs' },
+      { id: 'cleanroom', cn: '洁净车间', en: 'clean room environment, realistic contamination control measures' },
+      { id: 'storage', cn: '原料仓库', en: 'raw material warehouse, realistic stacking and inventory' },
+      { id: 'control', cn: '中控室', en: 'factory control room with realistic SCADA/HMI displays' }
+    ],
+    subjectMap: {
+      worker: { cn: '工厂工人（符合安全规范、工作服、防护装备、真实油污分布）', en: 'factory workers following safety regulations, work uniforms, protective gear' },
+      team: { cn: '班组协作（流水线配合、工序衔接、质量互检）', en: 'production team collaboration, line coordination, quality cross-checks' },
+      machine: { cn: '生产设备（真实型号、运行状态、维护痕迹）', en: 'production equipment with realistic models, operating status, maintenance marks' },
+      safety: { cn: '安全员（标准着装、巡检动作、隐患排查）', en: 'safety inspector in standard uniform, inspection rounds, hazard identification' },
+      engineer: { cn: '工程师（工艺优化、设备调试、数据分析）', en: 'engineer with process optimization, equipment debugging, data analysis' },
+      mixed: { cn: '人机协同（自动化设备监控、异常处理、协同作业）', en: 'human-machine collaboration, automated equipment monitoring, exception handling' }
+    },
+    lightingMap: {
+      day: { cn: '工厂白天：自然光+人工照明混合，色温5000K，光线均匀', en: 'factory daytime: natural + artificial light mix, 5000K, even illumination' },
+      dawn: { cn: '交接班时刻：晨光与夜班照明过渡，真实光线变化', en: 'shift change: dawn light transitioning with night lighting' },
+      night: { cn: '夜班照明：LED工矿灯（5000K），无频闪，符合作业标准', en: 'night shift: LED industrial lights (5000K), flicker-free, meeting work standards' },
+      interior: { cn: '车间室内：均匀照明，避免眩光，符合GB50034标准', en: 'workshop interior: uniform lighting, glare-free, GB50034 compliant' },
+      emergency: { cn: '应急照明：疏散指示灯，符合消防规范', en: 'emergency lighting: evacuation indicators, fire code compliant' }
+    },
+    sceneDesc: '工厂生产车间环境',
+    doubaoSuffix: '写实纪录片风格，所有元素符合真实工厂生产物理规律，无夸张效果，无卡通动漫风格，8K超清。'
+  },
+  
+  construction: {
+    name: '建筑工地',
+    icon: '🏗️',
+    badge: 'Construction Site',
+    tags: [
+      { id: 'crane', cn: '塔吊作业', en: 'tower crane operations, realistic lifting cycles, load sway' },
+      { id: 'concrete', cn: '混凝土浇筑', en: 'concrete pouring, realistic slump and flow, vibration compaction' },
+      { id: 'rebar', cn: '钢筋绑扎', en: 'rebar tying, realistic spacing and overlap, wire twisting' },
+      { id: 'scaffold', cn: '脚手架', en: 'scaffolding systems, realistic platform widths, safety rails' },
+      { id: 'excavator', cn: '挖掘机', en: 'excavator operations, realistic bucket movements, soil texture' },
+      { id: 'formwork', cn: '模板支护', en: 'formwork installation, realistic panel joints, support bracing' },
+      { id: 'survey', cn: '测量放线', en: 'surveying and layout, realistic instruments and markings' },
+      { id: 'safety', cn: '安全防护', en: 'safety nets, hard hats, harnesses, realistic wear patterns' },
+      { id: 'materials', cn: '建材堆放', en: 'construction material storage, realistic stacking heights' },
+      { id: 'welding', cn: '钢结构焊接', en: 'steel structure welding, realistic bead patterns, distortion' },
+      { id: 'foundation', cn: '基础施工', en: 'foundation work, realistic excavation depths, soil layers' },
+      { id: 'temp', cn: '临时设施', en: 'temporary facilities, site office, realistic layout' }
+    ],
+    subjectMap: {
+      worker: { cn: '建筑工人（安全帽、反光背心、真实泥污分布）', en: 'construction workers with hard hats, reflective vests, realistic dirt distribution' },
+      team: { cn: '施工班组（分工协作、工序配合、安全监护）', en: 'construction crew with division of labor, process coordination, safety supervision' },
+      machine: { cn: '施工机械（塔吊/挖掘机/混凝土泵车，真实运行状态）', en: 'construction machinery with realistic operating status' },
+      safety: { cn: '安全员（标准着装、现场巡查、隐患整改）', en: 'safety officer in standard uniform, site patrols, hazard correction' },
+      engineer: { cn: '工程师（图纸核对、质量验收、技术指导）', en: 'engineer with drawing checks, quality acceptance, technical guidance' },
+      mixed: { cn: '人机协同（机械操作配合、信号指挥、协同作业）', en: 'human-machine collaboration, machinery operation coordination, signal command' }
+    },
+    lightingMap: {
+      day: { cn: '工地白天：自然光，强烈阴影，尘土飞扬真实可见', en: 'site daytime: natural light, strong shadows, realistic dust' },
+      dawn: { cn: '清晨开工：晨光中塔吊剪影，真实光线角度', en: 'early morning start: tower crane silhouettes in dawn light' },
+      night: { cn: '夜间施工：大功率投光灯（4000K），照亮作业面', en: 'night construction: high-power floodlights (4000K), illuminating work areas' },
+      interior: { cn: '室内施工：临时照明，光线分布不均，真实作业环境', en: 'interior construction: temporary lighting, uneven distribution' },
+      emergency: { cn: '应急照明：警示灯，符合施工现场安全规范', en: 'emergency lighting: warning lights, site safety compliant' }
+    },
+    sceneDesc: '建筑施工现场环境',
+    doubaoSuffix: '写实纪录片风格，所有元素符合真实建筑施工物理规律，无夸张效果，无卡通动漫风格，8K超清。'
+  },
+  
+  railway: {
+    name: '铁路',
+    icon: '🚄',
+    badge: 'Railway System',
+    tags: [
+      { id: 'track', cn: '轨道线路', en: 'railway tracks with realistic ballast, sleepers, and rail joints' },
+      { id: 'train', cn: '列车运行', en: 'train operations, realistic speed and motion blur' },
+      { id: 'station', cn: '车站站台', en: 'train station platforms, realistic passenger flow and spacing' },
+      { id: 'signal', cn: '信号系统', en: 'railway signals, realistic aspect colors and timing' },
+      { id: 'maintenance', cn: '线路维护', en: 'track maintenance, realistic tools and inspection procedures' },
+      { id: 'overhead', cn: '接触网', en: 'overhead catenary system, realistic wire tension and poles' },
+      { id: 'tunnel', cn: '隧道工程', en: 'railway tunnel, realistic lighting and ventilation' },
+      { id: 'bridge', cn: '桥梁结构', en: 'railway bridge structures, realistic span and supports' },
+      { id: 'dispatch', cn: '调度指挥', en: 'railway dispatch center, realistic CTC displays' },
+      { id: 'crew', cn: '乘务作业', en: 'train crew operations, realistic uniforms and procedures' },
+      { id: 'freight', cn: '货运装卸', en: 'freight loading/unloading, realistic cargo handling' },
+      { id: 'substation', cn: '牵引变电', en: 'traction substation, realistic equipment and safety barriers' }
+    ],
+    subjectMap: {
+      worker: { cn: '铁路工人（标准制服、安全装备、真实作业状态）', en: 'railway workers in standard uniforms, safety equipment' },
+      team: { cn: '作业班组（线路维护配合、安全防护、协同作业）', en: 'maintenance crew with line work coordination, safety protection' },
+      machine: { cn: '铁路设备（机车/养路机械，真实运行状态）', en: 'railway equipment with realistic operating status' },
+      safety: { cn: '安全员（标准着装、现场防护、作业监护）', en: 'safety officer in standard uniform, site protection, work supervision' },
+      engineer: { cn: '工程师（设备检修、技术分析、调度指挥）', en: 'engineer with equipment maintenance, technical analysis, dispatch command' },
+      mixed: { cn: '人机协同（设备监控、故障处理、协同作业）', en: 'human-machine collaboration, equipment monitoring, fault handling' }
+    },
+    lightingMap: {
+      day: { cn: '铁路白天：自然光，轨道反光，真实透视', en: 'railway daytime: natural light, track reflections, realistic perspective' },
+      dawn: { cn: '清晨列车：晨光中列车剪影，真实光线氛围', en: 'early morning train: train silhouettes in dawn light' },
+      night: { cn: '夜间行车：车头灯光、信号灯、站台照明真实', en: 'night operation: headlight, signal lights, platform lighting' },
+      interior: { cn: '车厢/隧道内：人工照明，光线分布真实', en: 'carriage/tunnel interior: artificial lighting, realistic distribution' },
+      emergency: { cn: '应急照明：符合铁路安全标准', en: 'emergency lighting: railway safety standard compliant' }
+    },
+    sceneDesc: '铁路线路/车站环境',
+    doubaoSuffix: '写实纪录片风格，所有元素符合真实铁路运营物理规律，无夸张效果，无卡通动漫风格，8K超清。'
+  }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   通用映射（跨场景共用）
+   ════════════════════════════════════════════════════════════════ */
+
+const durationMap = ['5秒','15秒','30秒','60秒','3分钟'];
+const durationEnMap = ['5-second','15-second','30-second','60-second','3-minute'];
+
+const shotTypeMap = {
+  wide: {cn:'广角全景镜头缓慢推进，展现真实空间纵深', en:'wide-angle establishing shot slowly pushing forward, showing authentic spatial depth'},
+  medium: {cn:'中景镜头稳定平移，保持真实透视比例', en:'steady medium shot panning across, maintaining realistic perspective proportions'},
+  close: {cn:'特写镜头聚焦真实细节，汗水、油污、工具磨损痕迹清晰可见', en:'close-up focusing on authentic details — sweat, oil stains, tool wear marks clearly visible'},
+  aerial: {cn:'俯视镜头展示真实场地布局与作业流程', en:'overhead shot showing authentic site layout and operational workflow'},
+  pov: {cn:'第一人称作业视角，真实环境细节', en:'first-person worker POV, authentic environmental details'},
+  tracking: {cn:'跟踪镜头跟随真实作业动作，无夸张运镜', en:'tracking shot following realistic work movements, no exaggerated camera motion'}
+};
+
+const styleMap = {
+  realistic: {cn:'写实纪录片风格，真实粗粝质感，无滤镜美化，保留真实瑕疵', en:'cinéma vérité documentary style, gritty unpolished realism, no beautifying filters'},
+  cinematic: {cn:'电影写实风格，2.39:1画幅，自然调色无过度饱和，符合真实光影', en:'cinematic realism, 2.39:1 aspect ratio, natural color grading without oversaturation'},
+  industrial: {cn:'工业纪实风格，真实设备磨损、油污、锈迹，冷峻客观无夸张', en:'industrial documentary style, authentic equipment wear, oil stains, rust'},
+  safe: {cn:'安全纪实风格，清晰展示真实操作规范，人物动作符合安全规程', en:'safety documentary style, clearly showing authentic operational protocols'},
+  epic: {cn:'纪实性宏大风格，真实展现规模，人物与环境比例符合实际', en:'documentary epic style, authentically showing scale, human-to-environment proportions matching reality'}
+};
+
+const moodMap = {
+  heroic: {cn:'英雄主义奋斗情绪，激昂向上，彰显劳动者尊严', en:'heroic determination, uplifting spirit, celebrating the dignity of labor'},
+  serious: {cn:'严肃庄重的责任感，沉稳专注', en:'serious and solemn sense of responsibility, calm and focused'},
+  tense: {cn:'高度紧张专注的工作氛围，分秒必争', en:'highly tense and focused work atmosphere, every second counts'},
+  warm: {cn:'温情脉脉的人文关怀，展现劳动者鲜活的生活面貌', en:'warm humanistic care, showcasing the vibrant lives of workers'},
+  warning: {cn:'警示教育意义，直击安全痛点，引发反思', en:'cautionary warning tone, striking safety awareness, prompting reflection'}
+};
+
+/* ════════════════════════════════════════════════════════════════
+   状态与初始化
+   ════════════════════════════════════════════════════════════════ */
+
+let currentScene = 'coalmine';
+let history = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+let lastResult = { cn: '', en: '', doubao: '' };
+
+// 初始化场景标签
+document.addEventListener('DOMContentLoaded', () => {
+  renderSceneTags();
+  renderHistory();
+});
+
+/* ════════════════════════════════════════════════════════════════
+   场景切换
+   ════════════════════════════════════════════════════════════════ */
+
+function switchScene(sceneKey) {
+  currentScene = sceneKey;
+  const config = sceneConfigs[sceneKey];
+  
+  // 更新标签样式
+  document.querySelectorAll('.scene-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.scene === sceneKey);
+  });
+  
+  // 更新头部信息
+  document.getElementById('headerLogo').textContent = config.icon;
+  document.getElementById('headerTitle').textContent = config.name + '场景 · AI 视频提示词生成框架';
+  document.getElementById('headerBadge').textContent = config.badge;
+  
+  // 更新场景标签
+  renderSceneTags();
+  
+  // 清空结果
+  document.getElementById('resultBox').innerHTML = `
+    <div style="text-align:center; padding: 60px 0; color: #484f58;">
+      <div style="font-size:48px; margin-bottom:12px; opacity:0.3;">🎬</div>
+      <div style="font-size:14px;">已切换至${config.name}场景，点击「生成视频提示词」开始</div>
+    </div>
+  `;
+  document.getElementById('copyRow').style.display = 'none';
+}
+
+function renderSceneTags() {
+  const container = document.getElementById('sceneTags');
+  const config = sceneConfigs[currentScene];
+  container.innerHTML = config.tags.map(tag => 
+    `<span class="scene-tag active" data-val="${tag.id}">${tag.cn}</span>`
+  ).join('');
+  
+  // 重新绑定点击事件
+  container.querySelectorAll('.scene-tag').forEach(tag => {
+    tag.addEventListener('click', () => tag.classList.toggle('active'));
+  });
+}
+
+function getActiveTags() {
+  const config = sceneConfigs[currentScene];
+  const active = [];
+  document.querySelectorAll('.scene-tag.active').forEach(tag => {
+    const tagData = config.tags.find(t => t.id === tag.dataset.val);
+    if (tagData) active.push(tagData);
+  });
+  return active;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   提示词生成
+   ════════════════════════════════════════════════════════════════ */
+
+function generatePrompt() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) {
+    alert('请先输入文案内容');
+    return;
+  }
+
+  const config = sceneConfigs[currentScene];
+  const shotType  = document.getElementById('shotType').value;
+  const lighting  = document.getElementById('lighting').value;
+  const style     = document.getElementById('style').value;
+  const mood      = document.getElementById('mood').value;
+  const subject   = document.getElementById('subject').value;
+  const platform  = document.getElementById('platform').value;
+  const durIdx    = parseInt(document.getElementById('duration').value) - 1;
+  const activeTags = getActiveTags();
+
+  // 分析文案提取主题词
+  const theme = extractTheme(text);
+
+  // ── 中文提示词 ──
+  const tagsCN = activeTags.map(t => t.cn).join('；');
+  const cnPrompt = `【视频主题】${theme.cn}
+
+【场景描述 - 符合现实逻辑】
+${config.subjectMap[subject].cn}，在${config.lightingMap[lighting].cn}的${config.sceneDesc}中，${theme.action}。背景中${tagsCN ? tagsCN + '。' : ''}所有元素比例、物理效果和时空关系均符合真实${config.name}作业逻辑。
+
+【镜头语言 - 写实运镜】
+${shotTypeMap[shotType].cn}，${durationMap[durIdx]}视频，${styleMap[style].cn}。避免电影式夸张运镜，保持纪录片式的克制与真实。
+
+【光线氛围 - 物理准确】
+${config.lightingMap[lighting].cn}，整体${moodMap[mood].cn}。光线传播、反射和衰减符合真实物理规律。
+
+【画质要求 - 写实主义】
+8K超高清，写实摄影质感，保留真实胶片颗粒和轻微噪点，自然色彩无过度饱和，锐利但不过度锐化的细节，符合人眼真实视觉感受。
+
+【负向提示词 - 排除非现实元素】
+不要卡通、动漫、游戏风格；不要过曝或欠曝；不要失真变形；不要过度美化或滤镜效果；不要不符合安全规程的着装或行为；不要与真实场景不符的科幻或奇幻元素；不要不自然的慢动作或快动作；不要违反物理规律的效果。`;
+
+  // ── 英文提示词 ──
+  const tagsEN = activeTags.map(t => t.en).join('. ');
+  const enPrompt = `PHYSICALLY ACCURATE DOCUMENTARY: ${theme.en}. ${config.subjectMap[subject].en} in an authentic ${config.name} environment. ${config.lightingMap[lighting].en}. ${tagsEN ? tagsEN + '. ' : ''}All proportions, physics, and spatiotemporal relationships follow real-world ${config.name} logic. ${shotTypeMap[shotType].en}, ${durationEnMap[durIdx]} video. ${styleMap[style].en}. Authentic mood: ${moodMap[mood].en}. Lighting follows real physics laws. 8K ultra-detailed, photorealistic documentary style, natural film grain and slight noise, accurate colors without oversaturation, sharp yet not over-sharpened details matching human vision. NEGATIVE: no cartoon/anime/game style, no overexposure/underexposure, no distortion, no beautifying filters, no safety violations, no sci-fi/fantasy elements, no unnatural slow/fast motion, no physics-defying effects.`;
+
+  lastResult = { 
+    cn: cnPrompt, 
+    en: enPrompt, 
+    doubao: buildDoubaoPrompt(cnPrompt, config.doubaoSuffix) 
+  };
+
+  // 渲染结果
+  const platformLabels = { sora:'Sora', runway:'Runway Gen-3', kling:'可灵 Kling', wanx:'通义万象', doubao:'豆包', universal:'通用双语' };
+  document.getElementById('resultPlatformLabel').textContent = platformLabels[platform] || platform;
+
+  const resultBox = document.getElementById('resultBox');
+  resultBox.innerHTML = buildResultHTML(cnPrompt, enPrompt, platform, config.doubaoSuffix);
+  document.getElementById('copyRow').style.display = 'flex';
+
+  // 记录历史
+  addHistory(text, cnPrompt, currentScene);
+}
+
+function extractTheme(text) {
+  const actions = [];
+  if (text.includes('坚守') || text.includes('坚持')) actions.push('坚守岗位，不畏艰辛');
+  if (text.includes('安全') || text.includes('规范')) actions.push('严格遵守安全规程，规范操作');
+  if (text.includes('智能') || text.includes('科技') || text.includes('现代')) actions.push('操控智能化设备，展现现代工业风貌');
+  if (text.includes('奋斗') || text.includes('拼搏') || text.includes('青春')) actions.push('奋力拼搏，挥洒青春与汗水');
+  if (text.includes('传承') || text.includes('精神') || text.includes('工匠')) actions.push('传承工匠精神，精益求精');
+  if (text.includes('团队') || text.includes('协作') || text.includes('班组')) actions.push('团队协同作战，默契配合');
+
+  const actionCN = actions.length > 0 ? actions[0] : '全神贯注地投入作业';
+  const shortText = text.length > 40 ? text.substring(0, 40) + '…' : text;
+
+  return {
+    cn: shortText,
+    en: 'Workers demonstrating dedication, skill and resilience in industrial environment',
+    action: actionCN
+  };
+}
+
+function buildResultHTML(cn, en, platform, doubaoSuffix) {
+  if (platform === 'kling' || platform === 'wanx') {
+    return `<div class="result-section">
+      <div class="result-section-title">📝 中文提示词（${platform === 'kling' ? '可灵 Kling' : '通义万象'}）</div>
+      <div class="result-text" style="white-space:pre-wrap;">${escHtml(cn)}</div>
+    </div>`;
+  }
+  if (platform === 'doubao') {
+    const doubaoPrompt = buildDoubaoPrompt(cn, doubaoSuffix);
+    return `<div class="result-section">
+      <div class="result-section-title">📝 豆包专用提示词（字节跳动）</div>
+      <div style="font-size:11px;color:#6e7681;margin-bottom:10px;">豆包视频生成推荐简洁流畅的中文段落描述，已自动优化格式</div>
+      <div class="result-text" style="white-space:pre-wrap;">${escHtml(doubaoPrompt)}</div>
+    </div>`;
+  }
+  if (platform === 'sora' || platform === 'runway') {
+    return `<div class="result-section">
+      <div class="result-section-title">📝 英文提示词（${platform === 'sora' ? 'Sora' : 'Runway Gen-3'}）</div>
+      <div class="result-text en" style="white-space:pre-wrap;">${escHtml(en)}</div>
+    </div>`;
+  }
+  return `<div class="result-section">
+    <div class="result-section-title">📝 中文提示词</div>
+    <div class="result-text" style="white-space:pre-wrap;">${escHtml(cn)}</div>
+  </div>
+  <div class="result-section" style="margin-top:16px;">
+    <div class="result-section-title">🌐 英文提示词（English Prompt）</div>
+    <div class="result-text en" style="white-space:pre-wrap;">${escHtml(en)}</div>
+  </div>`;
+}
+
+function buildDoubaoPrompt(cn, suffix) {
+  const lines = cn.split('\n').filter(l => l.trim() && !l.startsWith('【'));
+  const clean = lines.map(l => l.replace(/^[•\-\s]+/, '').trim()).filter(Boolean);
+  return clean.join('，') + '。' + suffix;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   辅助功能
+   ════════════════════════════════════════════════════════════════ */
+
+function updateDuration(val) {
+  document.getElementById('durationLabel').textContent = durationMap[val - 1];
+}
+
+const examples = [
+  '工人在岗位上坚守，用汗水诠释工匠精神',
+  '智能化改造让传统工业焕发新生，机器轰鸣中技术工人精准操控',
+  '安全生产是最大的效益，每一个规范动作都是对生命的尊重',
+  '团队协作，默契配合，共同完成艰巨的生产任务',
+];
+
+function loadExample() {
+  const idx = Math.floor(Math.random() * examples.length);
+  document.getElementById('inputText').value = examples[idx];
+}
+
+function clearInput() {
+  document.getElementById('inputText').value = '';
+}
+
+function copyResult(lang) {
+  const platform = document.getElementById('platform').value;
+  const config = sceneConfigs[currentScene];
+  let text;
+  if (platform === 'doubao') {
+    text = lastResult.doubao || lastResult.cn;
+  } else {
+    text = lang === 'cn' ? lastResult.cn : lastResult.en;
+  }
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btnId = lang === 'cn' ? 'copyCN' : 'copyEN';
+    const btn = document.getElementById(btnId);
+    btn.classList.add('copied');
+    btn.textContent = '✅ 已复制！';
+    showToast();
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = lang === 'cn' ? '📋 复制中文提示词' : '📋 复制英文提示词';
+    }, 2000);
+  });
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   历史记录
+   ════════════════════════════════════════════════════════════════ */
+
+function addHistory(input, prompt, scene) {
+  const config = sceneConfigs[scene];
+  const item = {
+    input: input.substring(0, 80),
+    prompt,
+    scene: config.name,
+    sceneKey: scene,
+    time: new Date().toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+  };
+  history.unshift(item);
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('promptHistory', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyList');
+  if (history.length === 0) {
+    container.innerHTML = '<div class="empty-history">暂无历史记录</div>';
+    return;
+  }
+  container.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="restoreHistory(${i})">
+      <div class="hi-input">${escHtml(h.input)}</div>
+      <div class="hi-scene">${escHtml(h.scene)} · ${h.time}</div>
+    </div>
+  `).join('');
+}
+
+function restoreHistory(index) {
+  const h = history[index];
+  if (!h) return;
+  switchScene(h.sceneKey);
+  document.getElementById('inputText').value = h.input;
+}
+
+function clearHistory() {
+  history = [];
+  localStorage.removeItem('promptHistory');
+  renderHistory();
+}
+</script>
+
+</body>
+</html>
