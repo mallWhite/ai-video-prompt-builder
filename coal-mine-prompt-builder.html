@@ -302,13 +302,9 @@
       transform: translateX(24px);
     }
     .api-key-section {
-      display: none;
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid #30363d;
-    }
-    .api-key-section.visible {
-      display: block;
     }
     .api-provider-select {
       display: flex;
@@ -1168,12 +1164,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function initAIMode() {
   // 恢复AI模式设置
   const toggle = document.getElementById('aiModeToggle');
-  const apiSection = document.getElementById('apiKeySection');
   const inputSubText = document.getElementById('inputSubText');
   
   if (aiMode.enabled) {
     toggle.classList.add('active');
-    apiSection.classList.add('visible');
     inputSubText.textContent = 'AI将智能分析你的文案并生成专业视频提示词';
   }
   
@@ -1188,12 +1182,10 @@ function initAIMode() {
 
 function toggleAIMode() {
   const toggle = document.getElementById('aiModeToggle');
-  const apiSection = document.getElementById('apiKeySection');
   const inputSubText = document.getElementById('inputSubText');
   
   aiMode.enabled = !aiMode.enabled;
   toggle.classList.toggle('active', aiMode.enabled);
-  apiSection.classList.toggle('visible', aiMode.enabled);
   
   if (aiMode.enabled) {
     inputSubText.textContent = 'AI将智能分析你的文案并生成专业视频提示词';
@@ -1569,7 +1561,7 @@ async function generatePrompt() {
     const apiKey = aiMode.apiKeys[aiMode.provider];
     if (!apiKey) {
       alert(`请先配置${getProviderName(aiMode.provider)} API Key`);
-      document.getElementById('apiKeySection').classList.add('visible');
+      document.getElementById('apiKeyInput').focus();
       return;
     }
 
