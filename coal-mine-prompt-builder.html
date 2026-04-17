@@ -1228,22 +1228,27 @@ ${text}
 【场景类型】
 ${config.name}
 
-【参考参数】
-- 镜头类型：${shotTypeText}
-- 光线环境：${lightingText}
-- 画面风格：${styleText}
+【可选参考】
+以下参数仅供AI参考，请根据文案内容智能判断是否采用，不要强行套用：
+- 建议镜头类型：${shotTypeText}
+- 建议光线环境：${lightingText}
+- 建议画面风格：${styleText}
 - 视频时长：${duration}
-- 场景元素：${tagsText || '无'}
+- 可选场景元素：${tagsText || '无'}
 
-【任务要求】
-请将上述文案转化为专业的AI视频提示词，要求如下：
+【智能分析任务】
+请深度分析用户文案，提取以下要素并生成专业提示词：
 
-1. **主体描述**：详细描述人物/设备的外观、着装、状态，符合真实工业场景
-2. **动作细节**：具体的动作、姿态、操作流程，符合物理规律
-3. **环境氛围**：场景环境、光线、氛围，符合${config.name}的真实特点
-4. **镜头语言**：推荐的镜头角度、运镜方式、景别（参考：${shotTypeText}）
-5. **技术参数**：画质、风格、色调、特殊效果（参考：${styleText}）
-6. **写实要求**：符合物理规律、真实工业场景、无夸张效果、无卡通风格
+1. **主题角色识别**：从文案中识别主体是谁（工人/工程师/设备/团队等），他们的身份、着装、状态
+2. **情绪基调判断**：分析文案传达的情感（坚守/创新/严谨/协作/奋斗等），据此确定画面氛围
+3. **动作与场景构建**：根据文案描述，构建符合物理规律的具体动作和场景
+4. **镜头语言设计**：根据内容情感选择最合适的镜头语言（不要固定使用参考参数）
+5. **光线氛围营造**：根据情绪基调和场景特点，设计真实的光线效果
+
+【输出要求】
+- 写实纪录片风格，所有元素符合真实${config.name}场景物理规律
+- 无夸张效果，无卡通动漫风格，无过度美化滤镜
+- 8K超高清，保留真实胶片颗粒和自然色彩
 
 【输出格式】
 请输出以下格式的内容（包含中英文两个版本）：
@@ -1256,41 +1261,75 @@ ${config.name}
 
 要求：
 - 结构清晰，包含主体、动作、环境、镜头、光线、画质等要素
-- 描述详细但不过度冗长
+- 描述详细但不过度冗长（中文200-400字，英文对应长度）
 - 写实风格，符合真实${config.name}场景
 - 可以直接复制使用
 
 请直接输出提示词内容，不需要额外的解释说明。`;
 }
 
+// System Prompt - 定义AI角色和行为约束
+const SYSTEM_PROMPT = `你是一位专业的AI视频提示词工程师，专门将简短文案转化为详细的视频生成提示词。
+
+你的核心能力：
+1. 深度语义分析 - 从文案中提取情感基调、主体角色、核心动作
+2. 场景构建 - 根据场景类型构建符合物理规律的真实环境
+3. 镜头语言设计 - 根据内容情感选择最合适的运镜方式
+4. 双语输出 - 同时生成中文和英文提示词
+
+输出原则：
+- 写实纪录片风格，所有元素符合真实工业场景物理规律
+- 无夸张效果，无卡通动漫风格，无过度美化滤镜
+- 8K超高清，保留真实胶片颗粒和自然色彩
+- 中文200-400字，英文对应长度
+
+你必须使用以下XML标签格式输出：
+<cn_prompt>中文提示词内容</cn_prompt>
+<en_prompt>英文提示词内容</en_prompt>`;
+
 // 调用智谱API
-async function callZhipuAPI(prompt) {
+async function callZhipuAPI(prompt, signal) {
   const apiKey = aiMode.apiKeys.zhipu;
   if (!apiKey) throw new Error('请先配置智谱API Key');
   
-  const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'glm-4-flash',
-      messages: [
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 1500
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'API调用失败');
+  try {
+    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'glm-4-flash',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500
+      }),
+      signal: signal || controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || `API调用失败 (${response.status})`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接后重试');
+    }
+    throw error;
   }
-  
-  const data = await response.json();
-  return data.choices[0].message.content;
 }
 
 // 调用讯飞API
@@ -1300,52 +1339,85 @@ async function callXunfeiAPI(prompt) {
 }
 
 // 调用GeminiAPI
-async function callGeminiAPI(prompt) {
+async function callGeminiAPI(prompt, signal) {
   const apiKey = aiMode.apiKeys.gemini;
   if (!apiKey) throw new Error('请先配置Gemini API Key');
   
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1500
-      }
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'API调用失败');
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1500
+        }
+      }),
+      signal: signal || controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || `API调用失败 (${response.status})`);
+    }
+    
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接后重试');
+    }
+    throw error;
   }
-  
-  const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
 }
 
 // 解析AI返回的结果，提取中英文提示词
 function parseAIResult(aiText) {
-  let cn = aiText;
+  let cn = '';
   let en = '';
   
-  // 尝试匹配【中文提示词】和【英文提示词】格式
-  const cnMatch = aiText.match(/【中文提示词】\s*\n?([\s\S]*?)(?=【英文提示词】|$)/i);
-  const enMatch = aiText.match(/【英文提示词】\s*\n?([\s\S]*?)(?=【|$)/i);
+  // 优先尝试匹配XML标签格式 <cn_prompt>和<en_prompt>
+  const cnMatch = aiText.match(/<cn_prompt>([\s\S]*?)<\/cn_prompt>/i);
+  const enMatch = aiText.match(/<en_prompt>([\s\S]*?)<\/en_prompt>/i);
   
   if (cnMatch && cnMatch[1].trim()) {
     cn = cnMatch[1].trim();
   }
-  
   if (enMatch && enMatch[1].trim()) {
     en = enMatch[1].trim();
-  } else {
-    // 如果没有英文部分，使用中文作为英文（备用）
+  }
+  
+  // 如果XML格式未匹配成功，尝试旧格式【中文提示词】和【英文提示词】
+  if (!cn) {
+    const oldCnMatch = aiText.match(/【中文提示词】\s*\n?([\s\S]*?)(?=【英文提示词】|$)/i);
+    if (oldCnMatch && oldCnMatch[1].trim()) {
+      cn = oldCnMatch[1].trim();
+    }
+  }
+  
+  if (!en) {
+    const oldEnMatch = aiText.match(/【英文提示词】\s*\n?([\s\S]*?)(?=【|$)/i);
+    if (oldEnMatch && oldEnMatch[1].trim()) {
+      en = oldEnMatch[1].trim();
+    }
+  }
+  
+  // 如果仍然没有匹配到，使用整个文本作为中文，英文留空
+  if (!cn) {
+    cn = aiText.replace(/<[^>]+>/g, '').trim(); // 移除XML标签
+  }
+  if (!en) {
     en = cn;
   }
   
@@ -1356,26 +1428,40 @@ function parseAIResult(aiText) {
   return { cn, en };
 }
 
+// 请求管理器 - 支持取消和防重复
+let currentRequest = null;
+
 // AI生成提示词主函数
-async function generatePromptWithAI(text) {
+async function generatePromptWithAI(text, signal) {
   const prompt = buildAIPrompt(text);
   
-  let result;
-  switch(aiMode.provider) {
-    case 'zhipu':
-      result = await callZhipuAPI(prompt);
-      break;
-    case 'xunfei':
-      result = await callXunfeiAPI(prompt);
-      break;
-    case 'gemini':
-      result = await callGeminiAPI(prompt);
-      break;
-    default:
-      throw new Error('未知的AI提供商');
+  // 取消之前的请求
+  if (currentRequest) {
+    currentRequest.abort();
   }
   
-  return result;
+  const controller = new AbortController();
+  currentRequest = controller;
+  
+  try {
+    let result;
+    switch(aiMode.provider) {
+      case 'zhipu':
+        result = await callZhipuAPI(prompt, signal || controller.signal);
+        break;
+      case 'xunfei':
+        result = await callXunfeiAPI(prompt, signal || controller.signal);
+        break;
+      case 'gemini':
+        result = await callGeminiAPI(prompt, signal || controller.signal);
+        break;
+      default:
+        throw new Error('未知的AI提供商');
+    }
+    return result;
+  } finally {
+    currentRequest = null;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1480,7 +1566,7 @@ function removeCustomTag(event, index) {
   renderSceneTags();
 }
 
-// 回车键添加标签
+// 回车键添加标签 + 键盘快捷键
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('customTagInput');
   if (input) {
@@ -1491,6 +1577,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  
+  // 全局键盘快捷键
+  document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + Enter 生成提示词
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      generatePrompt();
+    }
+    // Ctrl/Cmd + L 加载示例
+    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+      e.preventDefault();
+      loadExample();
+    }
+    // Ctrl/Cmd + K 清空输入
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      clearInput();
+    }
+    // ESC 关闭加载遮罩（如果正在加载）
+    if (e.key === 'Escape') {
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      if (loadingOverlay.classList.contains('visible')) {
+        if (currentRequest) {
+          currentRequest.abort();
+        }
+        hideLoading();
+      }
+    }
+  });
 });
 
 function getActiveTags() {
@@ -1531,7 +1646,7 @@ async function generatePrompt() {
   if (aiMode.enabled) {
     const apiKey = aiMode.apiKeys[aiMode.provider];
     if (!apiKey) {
-      alert(`请先配置${getProviderName(aiMode.provider)} API Key`);
+      showError(`请先配置${getProviderName(aiMode.provider)} API Key`);
       document.getElementById('apiKeyInput').focus();
       return;
     }
@@ -1548,15 +1663,17 @@ async function generatePrompt() {
       lastResult = {
         cn: parsed.cn,
         en: parsed.en,
-        doubao: parsed.cn.replace(/【.*?】/g, '').replace(/\n/g, '，') + config.doubaoSuffix,
+        doubao: parsed.cn.replace(/【.*?】/g, '').replace(/<[^>]+>/g, '').replace(/\n/g, '，') + config.doubaoSuffix,
         aiGenerated: true
       };
       
       renderResult(platform, config);
       addHistory(text, parsed.cn, currentScene, true);
     } catch (error) {
-      alert('AI生成失败：' + error.message);
-      console.error(error);
+      if (error.name !== 'AbortError') {
+        showError('AI生成失败：' + error.message);
+        console.error(error);
+      }
     } finally {
       hideLoading();
     }
@@ -1715,7 +1832,9 @@ function copyResult(lang) {
     text = lang === 'cn' ? lastResult.cn : lastResult.en;
   }
   if (!text) return;
-  navigator.clipboard.writeText(text).then(() => {
+  
+  // 尝试使用现代Clipboard API，失败时降级到execCommand
+  const doCopy = () => {
     const btnId = lang === 'cn' ? 'copyCN' : 'copyEN';
     const btn = document.getElementById(btnId);
     btn.classList.add('copied');
@@ -1725,13 +1844,56 @@ function copyResult(lang) {
       btn.classList.remove('copied');
       btn.textContent = lang === 'cn' ? '📋 复制中文提示词' : '📋 复制英文提示词';
     }, 2000);
-  });
+  };
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(doCopy).catch(() => {
+      // 降级方案
+      fallbackCopy(text, doCopy);
+    });
+  } else {
+    fallbackCopy(text, doCopy);
+  }
 }
 
-function showToast() {
+// 剪贴板降级方案
+function fallbackCopy(text, callback) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const success = document.execCommand('copy');
+    if (success && callback) callback();
+  } catch (err) {
+    console.error('复制失败:', err);
+    showError('复制失败，请手动复制');
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+function showToast(message = '✅ 已复制到剪贴板') {
   const t = document.getElementById('toast');
+  t.textContent = message;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function showError(message) {
+  const t = document.getElementById('toast');
+  t.textContent = '❌ ' + message;
+  t.style.background = '#f85149';
+  t.classList.add('show');
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => {
+      t.style.background = '#3fb950';
+    }, 300);
+  }, 3000);
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1746,7 +1908,9 @@ function addHistory(input, prompt, scene, aiGenerated = false) {
     scene: config.name,
     sceneKey: scene,
     time: new Date().toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),
-    aiGenerated
+    aiGenerated,
+    // 保存完整的生成结果，用于恢复
+    result: { ...lastResult }
   };
   history.unshift(item);
   if (history.length > 20) history = history.slice(0, 20);
@@ -1771,14 +1935,34 @@ function renderHistory() {
 function restoreHistory(index) {
   const h = history[index];
   if (!h) return;
+  
+  // 恢复场景
   switchScene(h.sceneKey);
+  
+  // 恢复文案
   document.getElementById('inputText').value = h.input;
+  
+  // 恢复生成的结果
+  if (h.result) {
+    lastResult = h.result;
+    const platform = document.getElementById('platform').value;
+    const config = sceneConfigs[h.sceneKey];
+    renderResult(platform, config);
+  }
+  
+  // 滚动到输入区
+  document.getElementById('inputText').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function clearHistory() {
-  history = [];
-  localStorage.removeItem('promptHistory');
-  renderHistory();
+  if (history.length === 0) return;
+  
+  if (confirm(`确定要清空全部 ${history.length} 条历史记录吗？此操作不可恢复。`)) {
+    history = [];
+    localStorage.removeItem('promptHistory');
+    renderHistory();
+    showToast('🗑️ 历史记录已清空');
+  }
 }
 </script>
 
