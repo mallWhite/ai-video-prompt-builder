@@ -712,27 +712,7 @@
               <option value="epic">史诗大气磅礴</option>
             </select>
           </div>
-          <div class="param-group">
-            <label>情绪基调</label>
-            <select id="mood">
-              <option value="heroic">英雄主义·奋斗</option>
-              <option value="serious">严肃·责任感</option>
-              <option value="tense">紧张·专注</option>
-              <option value="warm">温情·人文关怀</option>
-              <option value="warning">警示·安全教育</option>
-            </select>
-          </div>
-          <div class="param-group">
-            <label>主体角色</label>
-            <select id="subject">
-              <option value="worker">一线工人</option>
-              <option value="team">班组协作</option>
-              <option value="machine">机械设备</option>
-              <option value="safety">安全员/质检</option>
-              <option value="engineer">技术工程师</option>
-              <option value="mixed">人机协同</option>
-            </select>
-          </div>
+          <!-- 情绪基调和主体角色已移除，由AI根据文案智能判断 -->
           <div class="param-group">
             <label>输出平台</label>
             <select id="platform">
@@ -935,14 +915,6 @@ const sceneConfigs = {
       { id: 'explosion', cn: '瓦斯监测', en: 'gas monitoring equipment, realistic sensor readings, safety compliance' },
       { id: 'rescue', cn: '救援演练', en: 'emergency rescue drill, proper safety equipment, realistic procedures' }
     ],
-    subjectMap: {
-      worker: { cn: '矿工（符合GB标准安全帽、反光背心、真实煤尘分布）', en: 'coal miners wearing GB-standard safety helmets, reflective vests, realistic coal dust distribution' },
-      team: { cn: '班组协作（真实作业配合、安全距离、手势沟通）', en: 'mining team collaboration, realistic work coordination, proper safety distances' },
-      machine: { cn: '采煤机（真实型号、切割滚筒转速、煤块飞溅轨迹）', en: 'coal shearer machine with realistic model specifications, cutting drum rotation speed' },
-      safety: { cn: '安全员（标准着装、检查动作、记录行为）', en: 'safety inspector in standard uniform, inspection movements, documentation' },
-      engineer: { cn: '工程师（技术图纸、测量工具、专业姿态）', en: 'mining engineer with technical drawings, measurement tools, professional posture' },
-      mixed: { cn: '人机协同（真实操作界面、响应延迟、配合节奏）', en: 'human-machine collaboration, realistic operation interface, coordination rhythm' }
-    },
     lightingMap: {
       day: { cn: '井下真实照明环境：矿灯光束（色温约3000K暖黄）穿透悬浮煤尘形成自然丁达尔效应', en: 'authentic underground lighting: helmet lamp beams (3000K warm yellow) penetrating suspended coal dust' },
       dawn: { cn: '黎明前真实矿区：天空微亮（色温约6500K冷白），矿灯与工业照明逐渐交接', en: 'authentic pre-dawn mine: sky gradually brightening (6500K cool white), helmet lamps transitioning' },
@@ -972,14 +944,6 @@ const sceneConfigs = {
       { id: 'nightops', cn: '夜间作业', en: 'night port operations, realistic lighting from cranes and ships' },
       { id: 'weather', cn: '恶劣天气', en: 'port operations in adverse weather, realistic wave and wind effects' }
     ],
-    subjectMap: {
-      worker: { cn: '码头工人（符合港口安全规范、反光背心、安全帽、真实油污分布）', en: 'dock workers following port safety regulations, reflective vests, realistic oil and dirt distribution' },
-      team: { cn: '班组协作（真实装卸配合、指挥手势、安全距离）', en: 'dock team collaboration, realistic loading coordination, hand signals' },
-      machine: { cn: '岸桥/场桥（真实型号、起升速度、吊具动作）', en: 'quay cranes/yard cranes with realistic models, hoisting speeds, spreader movements' },
-      safety: { cn: '安全员（标准着装、巡检动作、记录行为）', en: 'safety inspector in standard uniform, inspection rounds, documentation' },
-      engineer: { cn: '工程师（设备检修、技术图纸、专业姿态）', en: 'port engineer with maintenance tools, technical drawings, professional posture' },
-      mixed: { cn: '人机协同（远程操控、真实响应延迟、配合节奏）', en: 'human-machine collaboration, remote control, realistic response delay' }
-    },
     lightingMap: {
       day: { cn: '港口白天：正午阳光（色温5600K），强烈阴影，金属反光真实', en: 'port daytime: midday sun (5600K), strong shadows, realistic metal reflections' },
       dawn: { cn: '港口黎明：晨光（色温6500K）与港口灯光混合，真实过渡', en: 'port dawn: morning light (6500K) mixing with port lighting, realistic transition' },
@@ -1009,14 +973,6 @@ const sceneConfigs = {
       { id: 'storage', cn: '原料仓库', en: 'raw material warehouse, realistic stacking and inventory' },
       { id: 'control', cn: '中控室', en: 'factory control room with realistic SCADA/HMI displays' }
     ],
-    subjectMap: {
-      worker: { cn: '工厂工人（符合安全规范、工作服、防护装备、真实油污分布）', en: 'factory workers following safety regulations, work uniforms, protective gear' },
-      team: { cn: '班组协作（流水线配合、工序衔接、质量互检）', en: 'production team collaboration, line coordination, quality cross-checks' },
-      machine: { cn: '生产设备（真实型号、运行状态、维护痕迹）', en: 'production equipment with realistic models, operating status, maintenance marks' },
-      safety: { cn: '安全员（标准着装、巡检动作、隐患排查）', en: 'safety inspector in standard uniform, inspection rounds, hazard identification' },
-      engineer: { cn: '工程师（工艺优化、设备调试、数据分析）', en: 'engineer with process optimization, equipment debugging, data analysis' },
-      mixed: { cn: '人机协同（自动化设备监控、异常处理、协同作业）', en: 'human-machine collaboration, automated equipment monitoring, exception handling' }
-    },
     lightingMap: {
       day: { cn: '工厂白天：自然光+人工照明混合，色温5000K，光线均匀', en: 'factory daytime: natural + artificial light mix, 5000K, even illumination' },
       dawn: { cn: '交接班时刻：晨光与夜班照明过渡，真实光线变化', en: 'shift change: dawn light transitioning with night lighting' },
@@ -1046,14 +1002,6 @@ const sceneConfigs = {
       { id: 'foundation', cn: '基础施工', en: 'foundation work, realistic excavation depths, soil layers' },
       { id: 'temp', cn: '临时设施', en: 'temporary facilities, site office, realistic layout' }
     ],
-    subjectMap: {
-      worker: { cn: '建筑工人（安全帽、反光背心、真实泥污分布）', en: 'construction workers with hard hats, reflective vests, realistic dirt distribution' },
-      team: { cn: '施工班组（分工协作、工序配合、安全监护）', en: 'construction crew with division of labor, process coordination, safety supervision' },
-      machine: { cn: '施工机械（塔吊/挖掘机/混凝土泵车，真实运行状态）', en: 'construction machinery with realistic operating status' },
-      safety: { cn: '安全员（标准着装、现场巡查、隐患整改）', en: 'safety officer in standard uniform, site patrols, hazard correction' },
-      engineer: { cn: '工程师（图纸核对、质量验收、技术指导）', en: 'engineer with drawing checks, quality acceptance, technical guidance' },
-      mixed: { cn: '人机协同（机械操作配合、信号指挥、协同作业）', en: 'human-machine collaboration, machinery operation coordination, signal command' }
-    },
     lightingMap: {
       day: { cn: '工地白天：自然光，强烈阴影，尘土飞扬真实可见', en: 'site daytime: natural light, strong shadows, realistic dust' },
       dawn: { cn: '清晨开工：晨光中塔吊剪影，真实光线角度', en: 'early morning start: tower crane silhouettes in dawn light' },
@@ -1127,13 +1075,7 @@ const styleMap = {
   epic: {cn:'纪实性宏大风格，真实展现规模，人物与环境比例符合实际', en:'documentary epic style, authentically showing scale, human-to-environment proportions matching reality'}
 };
 
-const moodMap = {
-  heroic: {cn:'英雄主义奋斗情绪，激昂向上，彰显劳动者尊严', en:'heroic determination, uplifting spirit, celebrating the dignity of labor'},
-  serious: {cn:'严肃庄重的责任感，沉稳专注', en:'serious and solemn sense of responsibility, calm and focused'},
-  tense: {cn:'高度紧张专注的工作氛围，分秒必争', en:'highly tense and focused work atmosphere, every second counts'},
-  warm: {cn:'温情脉脉的人文关怀，展现劳动者鲜活的生活面貌', en:'warm humanistic care, showcasing the vibrant lives of workers'},
-  warning: {cn:'警示教育意义，直击安全痛点，引发反思', en:'cautionary warning tone, striking safety awareness, prompting reflection'}
-};
+// 情绪基调和主体角色已移除，由AI根据文案智能判断
 
 /* ════════════════════════════════════════════════════════════════
    状态与初始化
@@ -1270,16 +1212,12 @@ function buildAIPrompt(text, sceneConfig) {
   const shotType = document.getElementById('shotType').value;
   const lighting = document.getElementById('lighting').value;
   const style = document.getElementById('style').value;
-  const mood = document.getElementById('mood').value;
-  const subject = document.getElementById('subject').value;
   const duration = durationMap[parseInt(document.getElementById('duration').value) - 1];
   const activeTags = getActiveTags();
   
   const shotTypeText = shotTypeMap[shotType].cn;
   const lightingText = config.lightingMap[lighting].cn;
   const styleText = styleMap[style].cn;
-  const moodText = moodMap[mood].cn;
-  const subjectText = config.subjectMap[subject].cn;
   const tagsText = activeTags.map(t => t.cn).join('、');
   
   return `你是一位专业的AI视频提示词工程师，擅长将简短文案转化为详细的视频生成提示词。
@@ -1294,8 +1232,6 @@ ${config.name}
 - 镜头类型：${shotTypeText}
 - 光线环境：${lightingText}
 - 画面风格：${styleText}
-- 情绪基调：${moodText}
-- 主体角色：${subjectText}
 - 视频时长：${duration}
 - 场景元素：${tagsText || '无'}
 
@@ -1632,8 +1568,6 @@ async function generatePrompt() {
   const shotType  = document.getElementById('shotType').value;
   const lighting  = document.getElementById('lighting').value;
   const style     = document.getElementById('style').value;
-  const mood      = document.getElementById('mood').value;
-  const subject   = document.getElementById('subject').value;
   const platform  = document.getElementById('platform').value;
   const durIdx    = parseInt(document.getElementById('duration').value) - 1;
   const activeTags = getActiveTags();
@@ -1646,13 +1580,13 @@ async function generatePrompt() {
   const cnPrompt = `【视频主题】${theme.cn}
 
 【场景描述 - 符合现实逻辑】
-${config.subjectMap[subject].cn}，在${config.lightingMap[lighting].cn}的${config.sceneDesc}中，${theme.action}。背景中${tagsCN ? tagsCN + '。' : ''}所有元素比例、物理效果和时空关系均符合真实${config.name}作业逻辑。
+在${config.lightingMap[lighting].cn}的${config.sceneDesc}中，${theme.action}。背景中${tagsCN ? tagsCN + '。' : ''}所有元素比例、物理效果和时空关系均符合真实${config.name}作业逻辑。
 
 【镜头语言 - 写实运镜】
 ${shotTypeMap[shotType].cn}，${durationMap[durIdx]}视频，${styleMap[style].cn}。避免电影式夸张运镜，保持纪录片式的克制与真实。
 
 【光线氛围 - 物理准确】
-${config.lightingMap[lighting].cn}，整体${moodMap[mood].cn}。光线传播、反射和衰减符合真实物理规律。
+${config.lightingMap[lighting].cn}。光线传播、反射和衰减符合真实物理规律。
 
 【画质要求 - 写实主义】
 8K超高清，写实摄影质感，保留真实胶片颗粒和轻微噪点，自然色彩无过度饱和，锐利但不过度锐化的细节，符合人眼真实视觉感受。
@@ -1662,7 +1596,7 @@ ${config.lightingMap[lighting].cn}，整体${moodMap[mood].cn}。光线传播、
 
   // ── 英文提示词 ──
   const tagsEN = activeTags.map(t => t.en).join('. ');
-  const enPrompt = `PHYSICALLY ACCURATE DOCUMENTARY: ${theme.en}. ${config.subjectMap[subject].en} in an authentic ${config.name} environment. ${config.lightingMap[lighting].en}. ${tagsEN ? tagsEN + '. ' : ''}All proportions, physics, and spatiotemporal relationships follow real-world ${config.name} logic. ${shotTypeMap[shotType].en}, ${durationEnMap[durIdx]} video. ${styleMap[style].en}. Authentic mood: ${moodMap[mood].en}. Lighting follows real physics laws. 8K ultra-detailed, photorealistic documentary style, natural film grain and slight noise, accurate colors without oversaturation, sharp yet not over-sharpened details matching human vision. NEGATIVE: no cartoon/anime/game style, no overexposure/underexposure, no distortion, no beautifying filters, no safety violations, no sci-fi/fantasy elements, no unnatural slow/fast motion, no physics-defying effects.`;
+  const enPrompt = `PHYSICALLY ACCURATE DOCUMENTARY: ${theme.en} in an authentic ${config.name} environment. ${config.lightingMap[lighting].en}. ${tagsEN ? tagsEN + '. ' : ''}All proportions, physics, and spatiotemporal relationships follow real-world ${config.name} logic. ${shotTypeMap[shotType].en}, ${durationEnMap[durIdx]} video. ${styleMap[style].en}. Lighting follows real physics laws. 8K ultra-detailed, photorealistic documentary style, natural film grain and slight noise, accurate colors without oversaturation, sharp yet not over-sharpened details matching human vision. NEGATIVE: no cartoon/anime/game style, no overexposure/underexposure, no distortion, no beautifying filters, no safety violations, no sci-fi/fantasy elements, no unnatural slow/fast motion, no physics-defying effects.`;
 
   lastResult = { 
     cn: cnPrompt, 
