@@ -1310,7 +1310,15 @@ ${config.name}
 6. **写实要求**：符合物理规律、真实工业场景、无夸张效果、无卡通风格
 
 【输出格式】
-请直接输出一段完整的中文视频提示词，适合用于可灵、豆包、Runway、Sora等AI视频生成工具。提示词应该：
+请输出以下格式的内容（包含中英文两个版本）：
+
+【中文提示词】
+（一段完整的中文视频提示词，适合用于可灵、豆包等国产AI视频工具）
+
+【英文提示词】
+（上述内容的英文翻译，适合用于Runway、Sora等国际AI视频工具）
+
+要求：
 - 结构清晰，包含主体、动作、环境、镜头、光线、画质等要素
 - 描述详细但不过度冗长
 - 写实风格，符合真实${config.name}场景
@@ -1385,6 +1393,33 @@ async function callGeminiAPI(prompt) {
   return data.candidates[0].content.parts[0].text;
 }
 
+// 解析AI返回的结果，提取中英文提示词
+function parseAIResult(aiText) {
+  let cn = aiText;
+  let en = '';
+  
+  // 尝试匹配【中文提示词】和【英文提示词】格式
+  const cnMatch = aiText.match(/【中文提示词】\s*\n?([\s\S]*?)(?=【英文提示词】|$)/i);
+  const enMatch = aiText.match(/【英文提示词】\s*\n?([\s\S]*?)(?=【|$)/i);
+  
+  if (cnMatch && cnMatch[1].trim()) {
+    cn = cnMatch[1].trim();
+  }
+  
+  if (enMatch && enMatch[1].trim()) {
+    en = enMatch[1].trim();
+  } else {
+    // 如果没有英文部分，使用中文作为英文（备用）
+    en = cn;
+  }
+  
+  // 清理可能的标记符号
+  cn = cn.replace(/^[""']|[""']$/g, '').trim();
+  en = en.replace(/^[""']|[""']$/g, '').trim();
+  
+  return { cn, en };
+}
+
 // AI生成提示词主函数
 async function generatePromptWithAI(text) {
   const prompt = buildAIPrompt(text);
@@ -1448,12 +1483,12 @@ function renderSceneTags() {
   const container = document.getElementById('sceneTags');
   const config = sceneConfigs[currentScene];
   
-  // 生成预设标签HTML
+  // 生成预设标签HTML（默认不选中）
   let html = config.tags.map(tag => 
-    `<span class="scene-tag active" data-val="${tag.id}" data-type="preset">${tag.cn}</span>`
+    `<span class="scene-tag" data-val="${tag.id}" data-type="preset">${tag.cn}</span>`
   ).join('');
   
-  // 添加自定义标签HTML
+  // 添加自定义标签HTML（默认选中）
   html += customTags.map((tag, index) => 
     `<span class="scene-tag custom active" data-index="${index}" data-type="custom">${tag.cn}<span class="remove-btn" onclick="removeCustomTag(event, ${index})">×</span></span>`
   ).join('');
@@ -1571,15 +1606,18 @@ async function generatePrompt() {
       const platform = document.getElementById('platform').value;
       const config = sceneConfigs[currentScene];
       
+      // 解析AI返回的中英文提示词
+      const parsed = parseAIResult(aiResult);
+      
       lastResult = {
-        cn: aiResult,
-        en: 'AI生成模式暂不提供英文翻译，请使用本地模板模式或手动翻译',
-        doubao: aiResult.replace(/【.*?】/g, '').replace(/\n/g, '，') + config.doubaoSuffix,
+        cn: parsed.cn,
+        en: parsed.en,
+        doubao: parsed.cn.replace(/【.*?】/g, '').replace(/\n/g, '，') + config.doubaoSuffix,
         aiGenerated: true
       };
       
       renderResult(platform, config);
-      addHistory(text, aiResult, currentScene, true);
+      addHistory(text, parsed.cn, currentScene, true);
     } catch (error) {
       alert('AI生成失败：' + error.message);
       console.error(error);
